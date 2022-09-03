@@ -29,8 +29,6 @@ export default class Ball{
         this.BALL_USERSPEEDROTATE_DESC = 0.01;
         this.BALL_USERSPEEDROTATE_MOB = 0.01;
 
-        this.BDG_TRANSPARENT = true;
-
         this.STR_BALLNAME         = "Soccer_Ball_2";
         this.STR_PATHDEFAULTIMAGE = "./badges/default.png"
         //#endregion
@@ -395,7 +393,7 @@ class Badge{
         var maptxt = textureloader.load(img);
         maptxt.flipY = false;
 
-        var my_material = new THREE.MeshBasicMaterial({map: maptxt, transparent : this.BDG_TRANSPARENT});
+        var my_material = new THREE.MeshBasicMaterial({map: maptxt, transparent: true});
         this.Object.material = my_material;
         this.Object.visible = true;
         this.Visible = true;

@@ -10,25 +10,29 @@ export default class Ball{
      */
     constructor(canvaSelector, ballPath, IsRotate = false, RotateSpeed = 0.001, BallColor = 0xffffff){
         //#region Consts
+        //Render
         this.R_ISALPHA     = true;
         this.R_ISANTIALIAS = true;
         this.R_PIXELRATIO  = 1.5;
-
-        this.CAM_POS_X  = 1;
+        //Camera
+        this.CAM_POS_X  = 2;
         this.CAM_POS_Y  = 0;
-        this.CAM_POS_Z  = 1;
+        this.CAM_POS_Z  = 0;
         this.CAM_LOOK_X = 0;
         this.CAM_LOOK_Y = 0;
         this.CAM_LOOK_Z = 0;
         this.CAMFOV     = 60;
-
+        //Light
         this.L_COLOR       = 0xffffff;
         this.L_GROUNDCOLOR = 0xB97A20;
         this.L_INTENSITY   = 1;
-
+        this.L_POS_X       = 6;
+        this.L_POS_Y       = 2;
+        this.L_POS_Z       = -2;
+        //Ball
         this.BALL_USERSPEEDROTATE_DESC = 0.01;
         this.BALL_USERSPEEDROTATE_MOB = 0.01;
-
+        //Strgings
         this.STR_BALLNAME         = "Soccer_Ball_2";
         this.STR_PATHDEFAULTIMAGE = "./badges/default.png"
         //#endregion
@@ -37,7 +41,7 @@ export default class Ball{
         this.Scene           = new Scene();
         this.Camera          = new Camera(this.canva_container, this.CAMFOV, this.CAM_POS_X, this.CAM_POS_Y, this.CAM_POS_Z, this.CAM_LOOK_X, this.CAM_LOOK_Y, this.CAM_LOOK_Z);
         this.Render          = new Render(this.R_ISALPHA, this.R_ISANTIALIAS, this.R_PIXELRATIO, this.canva_container);
-        this.Light           = new Light(this.L_COLOR, this.L_GROUNDCOLOR, this.L_INTENSITY);
+        this.Light           = new Light(this.L_COLOR, this.L_GROUNDCOLOR, this.L_INTENSITY, this.L_POS_X, this.L_POS_Y, this.L_POS_Z);
         this.LoadController  = new ObjectLoadController();
         this.Light.set(this.Scene.entity);
 
@@ -49,14 +53,12 @@ export default class Ball{
         this.Ball        = undefined;
         this.Badges      = [];
 
-        this.loadBall(this.BallPath);
-
-        setTimeout(() => {
-            this.gui();
-        }, 1000);
-        
+        this.#loadBall(this.BallPath);    
     }
 
+    /**
+     * Включить панель графического пользовтельского интерфейса
+     */
     gui(){
         const gui = new GUI();
 
@@ -157,7 +159,7 @@ export default class Ball{
         });
     }
 
-    loadBall(url){
+    #loadBall(url){
         let lf_ball = this.LoadController.load(url);
 
         Promise.all([lf_ball]).then(() => {
@@ -177,9 +179,25 @@ export default class Ball{
                     this.BallShape.material.color = new THREE.Color(this.BallColor);
                 }
             });
-            this.initEvents();
-            this.render();
+            this.#initEvents();
+            this.#render();
         });
+    }
+
+    #rotateAroundWorldAxis(object, axis, radians){
+        var rotWorldMatrix = new THREE.Matrix4();
+        rotWorldMatrix.makeRotationAxis(axis.normalize(), radians);
+    
+        var currentPos = new THREE.Vector4(object.position.x, object.position.y, object.position.z, 1);
+        var newPos = currentPos.applyMatrix4(rotWorldMatrix);
+    
+        rotWorldMatrix.multiply(object.matrix);
+        object.matrix = rotWorldMatrix;
+        object.rotation.setFromRotationMatrix(object.matrix);
+    
+        object.position.x = newPos.x;
+        object.position.y = newPos.y;
+        object.position.z = newPos.z;
     }
 
     /**
@@ -228,7 +246,7 @@ export default class Ball{
         this.Render.resize(this.canva_container.offsetWidth, this.canva_container.offsetHeight);
     }
 
-    initEvents(){
+    #initEvents(){
         this.canva_container.addEventListener('mousedown', (e) => {
             var x = event.clientX;
             var y = event.clientY;
@@ -244,15 +262,33 @@ export default class Ball{
             var y = event.clientY;
 
             var deltaX = (( x / window.innerWidth ) * 2 - 1) - this.vec_mouse.x;
-
-            if(deltaX > 0){
-                this.Ball.rotateY(this.BALL_USERSPEEDROTATE_DESC);
+            var deltaY = (- ( y / window.innerHeight ) * 2 + 1) - this.vec_mouse.y;
+            
+            if(Math.abs(deltaY) > Math.abs(deltaX)){
+                if(deltaY > 0){
+                    //this.Ball.rotateY(this.BALL_USERSPEEDROTATE_DESC);
+                    this.#rotateAroundWorldAxis(this.Ball, new THREE.Vector3(0, 0, 1), this.BALL_USERSPEEDROTATE_DESC);
+                }
+                else if(deltaY < 0){
+                    //this.Ball.rotateY(-this.BALL_USERSPEEDROTATE_DESC);
+                    this.#rotateAroundWorldAxis(this.Ball, new THREE.Vector3(0, 0, 1), -this.BALL_USERSPEEDROTATE_DESC);
+                }
+                else{
+                    return;
+                }
             }
-            else if(deltaX < 0){
-                this.Ball.rotateY(-this.BALL_USERSPEEDROTATE_DESC);
-            }
-            else{
-                return;
+            else if(Math.abs(deltaY) < Math.abs(deltaX)){
+                if(deltaX > 0){
+                    //this.Ball.rotateY(this.BALL_USERSPEEDROTATE_DESC);
+                    this.#rotateAroundWorldAxis(this.Ball, new THREE.Vector3(0, 1, 0), this.BALL_USERSPEEDROTATE_DESC);
+                }
+                else if(deltaX < 0){
+                    //this.Ball.rotateY(-this.BALL_USERSPEEDROTATE_DESC);
+                    this.#rotateAroundWorldAxis(this.Ball, new THREE.Vector3(0, 1, 0), -this.BALL_USERSPEEDROTATE_DESC);
+                }
+                else{
+                    return;
+                }
             }
             
             this.vec_mouse = new THREE.Vector2(( x / window.innerWidth ) * 2 - 1, - ( y / window.innerHeight ) * 2 + 1);
@@ -284,11 +320,11 @@ export default class Ball{
         });
     }
 
-    render(){
+    #render(){
         this.Render.render(this.Scene.entity, this.Camera.entity);
         if(this.Ball && this.IsRotate)
-            this.Ball.rotateY(this.RotateSpeed);
-        requestAnimationFrame(this.render.bind(this));
+            this.#rotateAroundWorldAxis(this.Ball, new THREE.Vector3(0, 1, 0), this.RotateSpeed);
+        requestAnimationFrame(this.#render.bind(this));
     }
 }
 
@@ -337,13 +373,13 @@ class Render{
 }
 
 class Light{
-    constructor(color, groundColor, intensity){
+    constructor(color, groundColor, intensity, pos_x, pos_y, pos_z){
         this.color = color; 
         this.groundColor = groundColor;  
         this.intensity = intensity;
         this.light = new THREE.DirectionalLight(this.color, this.intensity);
 
-        this.light.position.set(6.14, 5.96, 7.2);
+        this.light.position.set(pos_x, pos_y, pos_z);
         this.light.target.position.set(0, 0, 0);
     }
 
